@@ -1,8 +1,10 @@
 import type { ImageSourcePropType } from "react-native";
 
 declare global {
+  type AppTabRouteName = "index" | "subscriptions" | "insights" | "settings";
+  
   interface AppTab {
-    name: string;
+    name: AppTabRouteName;
     title: string;
     icon: ImageSourcePropType;
   }
