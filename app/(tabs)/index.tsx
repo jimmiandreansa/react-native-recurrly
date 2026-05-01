@@ -67,7 +67,7 @@ export default function App() {
               />
             </View>
 
-            <ListHeading title="All Subcription" />
+            <ListHeading title="All Subscriptions" />
           </>
         )}
         data={HOME_SUBSCRIPTIONS}
