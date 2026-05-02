@@ -21,6 +21,9 @@ import {
   View,
 } from "react-native";
 
+const MFA_NETWORK_FALLBACK =
+  "We could not reach our servers. Check your connection and try again.";
+
 export default function SignInScreen() {
   const router = useRouter();
   const { signIn, errors, fetchStatus } = useSignIn();
@@ -93,7 +96,16 @@ export default function SignInScreen() {
         (factor) => factor.strategy === "email_code",
       );
       if (emailCodeFactor) {
-        await signIn.mfa.sendEmailCode();
+        try {
+          const { error: sendErr } = await signIn.mfa.sendEmailCode();
+          if (sendErr) {
+            setBanner(mapClerkApiError(sendErr));
+            return;
+          }
+        } catch {
+          setBanner(MFA_NETWORK_FALLBACK);
+          return;
+        }
       } else {
         setBanner(
           "We need to verify it is really you, but this verification method is not available in the app yet.",
@@ -105,6 +117,18 @@ export default function SignInScreen() {
     setBanner("We could not finish signing you in. Please try again.");
   };
 
+  const handleResendMfaCode = async () => {
+    setBanner(null);
+    try {
+      const { error: sendErr } = await signIn.mfa.sendEmailCode();
+      if (sendErr) {
+        setBanner(mapClerkApiError(sendErr));
+      }
+    } catch {
+      setBanner(MFA_NETWORK_FALLBACK);
+    }
+  };
+
   const handleVerify = async () => {
     setAttempted(true);
     setBanner(null);
@@ -114,10 +138,25 @@ export default function SignInScreen() {
       return;
     }
 
-    await signIn.mfa.verifyEmailCode({ code: code.trim() });
+    try {
+      const { error: verifyErr } = await signIn.mfa.verifyEmailCode({
+        code: code.trim(),
+      });
+      if (verifyErr) {
+        setBanner(mapClerkApiError(verifyErr));
+        return;
+      }
+    } catch {
+      setBanner(MFA_NETWORK_FALLBACK);
+      return;
+    }
 
     if (signIn.status === "complete") {
-      await finalizeAndGoHome();
+      try {
+        await finalizeAndGoHome();
+      } catch {
+        setBanner(MFA_NETWORK_FALLBACK);
+      }
       return;
     }
 
@@ -161,7 +200,7 @@ export default function SignInScreen() {
             />
             <Pressable
               className="auth-secondary-button"
-              onPress={() => signIn.mfa.sendEmailCode()}
+              onPress={() => void handleResendMfaCode()}
               disabled={fetchStatus === "fetching"}
             >
               <Text className="auth-secondary-button-text">
