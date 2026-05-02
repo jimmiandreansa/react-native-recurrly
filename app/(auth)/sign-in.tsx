@@ -10,6 +10,7 @@ import {
   validatePassword,
   validateVerificationCode,
 } from "@/lib/auth/validation";
+import { posthog } from "@/lib/posthog";
 import { useSignIn } from "@clerk/expo";
 import { Link, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -76,19 +77,22 @@ export default function SignInScreen() {
         password,
       });
       if (error) {
+        posthog.capture("user_sign_in_failed", { reason: mapClerkApiError(error) });
         setBanner(mapClerkApiError(error));
         return;
       }
     } catch (err) {
-      setBanner(
-        mapClerkApiError(
-          err instanceof Error ? err : new Error("Sign-in failed"),
-        ),
+      const msg = mapClerkApiError(
+        err instanceof Error ? err : new Error("Sign-in failed"),
       );
+      posthog.capture("user_sign_in_failed", { reason: msg });
+      setBanner(msg);
       return;
     }
 
     if (signIn.status === "complete") {
+      posthog.identify(emailNorm, { $set: { email: emailNorm } });
+      posthog.capture("user_signed_in", { method: "password" });
       try {
         await finalizeAndGoHome();
       } catch (err) {
@@ -119,6 +123,7 @@ export default function SignInScreen() {
             setBanner(mapClerkApiError(sendErr));
             return;
           }
+          posthog.capture("user_mfa_code_sent", { method: "email_code" });
         } catch {
           setBanner(MFA_NETWORK_FALLBACK);
           return;
@@ -169,6 +174,8 @@ export default function SignInScreen() {
     }
 
     if (signIn.status === "complete") {
+      posthog.identify(emailNorm, { $set: { email: emailNorm } });
+      posthog.capture("user_signed_in", { method: "email_code_mfa" });
       try {
         await finalizeAndGoHome();
       } catch {
