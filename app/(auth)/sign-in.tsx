@@ -70,17 +70,34 @@ export default function SignInScreen() {
     const pErr = validatePassword(password);
     if (eErr || pErr) return;
 
-    const { error } = await signIn.password({
-      emailAddress: emailNorm,
-      password,
-    });
-    if (error) {
-      setBanner(mapClerkApiError(error));
+    try {
+      const { error } = await signIn.password({
+        emailAddress: emailNorm,
+        password,
+      });
+      if (error) {
+        setBanner(mapClerkApiError(error));
+        return;
+      }
+    } catch (err) {
+      setBanner(
+        mapClerkApiError(
+          err instanceof Error ? err : new Error("Sign-in failed"),
+        ),
+      );
       return;
     }
 
     if (signIn.status === "complete") {
-      await finalizeAndGoHome();
+      try {
+        await finalizeAndGoHome();
+      } catch (err) {
+        setBanner(
+          mapClerkApiError(
+            err instanceof Error ? err : new Error("Sign-in failed"),
+          ),
+        );
+      }
       return;
     }
 

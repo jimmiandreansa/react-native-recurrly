@@ -30,6 +30,9 @@ export function mapClerkApiError(error: unknown): string {
     const first = error.errors?.[0]?.message;
     if (first) return soften(first);
   }
+  if (error instanceof Error && error.message.trim()) {
+    return soften(error.message);
+  }
   return "Something went wrong. Please try again.";
 }
 
