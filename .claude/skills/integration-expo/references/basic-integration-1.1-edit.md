@@ -13,9 +13,15 @@ For each event, add useful properties, and use your access to the PostHog source
 
 Remember that you can find the source code for any dependency in the node_modules directory. This may be necessary to properly populate property names. There are also example project code files available via the PostHog MCP; use these for reference.
 
-Where possible, add calls for PostHog's identify() function on the client side upon events like logins and signups. Use the contents of login and signup forms to identify users on submit. If there is server-side code, pass the client-side session and distinct ID to the server-side code to identify the user. On the server side, make sure events have a matching distinct ID where relevant. 
+Where possible, add calls for PostHog's **identify()** on the client from **login/signup form handlers** (e.g. after successful auth), using a **stable distinct ID** (such as the authenticated user id from your auth provider) plus **approved, non-sensitive user properties** only—for example an email address **only where your privacy policy and product policy explicitly permit** it.
 
-It's essential to do this in both client code and server code, so that user behavior from both domains is easy to correlate.
+**Do not send secrets:** never pass passwords, session tokens, API keys, refresh tokens, magic-link tokens, or any other secret or credential field to **identify()** or to `capture()` properties. **Login/signup form handlers** must **sanitize** payloads before calling PostHog: build an explicit allowlist of properties (e.g. `userId`, optional `email`) and **drop every other field** from the form and auth response before sending.
+
+If there is **server-side** code that receives a **session** or **distinct ID** for analytics or `identify`-equivalent flows, it must enforce the **same restriction**: correlate events with the **distinct ID** only, never log or forward secrets, and never persist form passwords or tokens into PostHog or ancillary logs.
+
+On the server side, make sure events have a **matching distinct ID** where relevant so client and server behavior remain easy to correlate.
+
+It's essential to align **distinct ID** usage in both client code and server code, so that user behavior from both domains is easy to correlate—without ever mixing in secret fields.
 
 You should also add PostHog exception capture error tracking to these files where relevant.
 

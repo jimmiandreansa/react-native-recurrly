@@ -1,5 +1,6 @@
 import "@/global.css";
 import { posthog } from "@/lib/posthog";
+import { filterScreenQueryParams } from "@/lib/posthogScreenQueryParams";
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { useFonts } from "expo-font";
@@ -29,9 +30,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (previousPathname.current !== pathname) {
+      const safeQuery = filterScreenQueryParams(
+        params as Record<string, unknown>,
+      );
       posthog.screen(pathname, {
         previous_screen: previousPathname.current ?? null,
-        ...params,
+        ...safeQuery,
       });
       previousPathname.current = pathname;
     }
