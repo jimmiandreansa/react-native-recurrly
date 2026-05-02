@@ -2,6 +2,7 @@ import { styled } from "nativewind";
 import { Alert, Pressable, Text, View } from "react-native";
 import { SafeAreaView as RNSafeAreaView } from "react-native-safe-area-context";
 
+import { posthog } from "@/lib/posthog";
 import { useClerk, useUser } from "@clerk/expo";
 
 const SafeAreaView = styled(RNSafeAreaView);
@@ -26,7 +27,11 @@ const Settings = () => {
         {
           text: "Log out",
           style: "destructive",
-          onPress: () => void signOut(),
+          onPress: () => {
+            posthog.capture("user_signed_out");
+            posthog.reset();
+            void signOut();
+          },
         },
       ],
     );

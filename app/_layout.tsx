@@ -1,9 +1,17 @@
 import "@/global.css";
+import { posthog } from "@/lib/posthog";
+import { filterScreenQueryParams } from "@/lib/posthogScreenQueryParams";
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { useFonts } from "expo-font";
-import { SplashScreen, Stack } from "expo-router";
-import { useEffect } from "react";
+import {
+  SplashScreen,
+  Stack,
+  useGlobalSearchParams,
+  usePathname,
+} from "expo-router";
+import { PostHogProvider } from "posthog-react-native";
+import { useEffect, useRef } from "react";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,6 +24,23 @@ if (!publishableKey) {
 }
 
 export default function RootLayout() {
+  const pathname = usePathname();
+  const params = useGlobalSearchParams();
+  const previousPathname = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (previousPathname.current !== pathname) {
+      const safeQuery = filterScreenQueryParams(
+        params as Record<string, unknown>,
+      );
+      posthog.screen(pathname, {
+        previous_screen: previousPathname.current ?? null,
+        ...safeQuery,
+      });
+      previousPathname.current = pathname;
+    }
+  }, [pathname, params]);
+
   const [fontsLoaded] = useFonts({
     "sans-regular": require("../assets/fonts/PlusJakartaSans-Regular.ttf"),
     "sans-bold": require("../assets/fonts/PlusJakartaSans-Bold.ttf"),
@@ -34,8 +59,17 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </ClerkProvider>
+    <PostHogProvider
+      client={posthog}
+      autocapture={{
+        captureScreens: false,
+        captureTouches: true,
+        propsToCapture: ["testID"],
+      }}
+    >
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </ClerkProvider>
+    </PostHogProvider>
   );
 }

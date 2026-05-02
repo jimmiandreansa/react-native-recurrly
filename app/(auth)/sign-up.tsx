@@ -10,6 +10,7 @@ import {
   validatePassword,
   validateVerificationCode,
 } from "@/lib/auth/validation";
+import { posthog } from "@/lib/posthog";
 import { useAuth, useSignUp } from "@clerk/expo";
 import { Link, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
@@ -77,6 +78,8 @@ export default function SignUpScreen() {
       return;
     }
 
+    posthog.capture("user_sign_up_submitted", { email: emailNorm });
+
     const { error: sendErr } = await signUp.verifications.sendEmailCode();
     if (sendErr) {
       setBanner(mapClerkApiError(sendErr));
@@ -101,6 +104,11 @@ export default function SignUpScreen() {
     }
 
     if (signUp.status === "complete") {
+      posthog.identify(emailNorm, {
+        $set: { email: emailNorm },
+        $set_once: { first_sign_up_date: new Date().toISOString() },
+      });
+      posthog.capture("user_signed_up", { email: emailNorm });
       await finalizeAndGoHome();
       return;
     }
